@@ -136,7 +136,7 @@ dummy values rather than real credentials.
 ## File safety
 
 - `.env`, `.env.production`, and other environment files can be committed after their secret values are encrypted.
-- `.env.keys` contains private decryption keys. Keep it out of Git.
+- `.env.keys` contains private decryption keys. **Keep it out of Git.**
 - **Decrypt file** writes the selected file's values to disk as plaintext until you encrypt it again.
 - Symbolic-link environment files and files outside your home directory are rejected.
 
