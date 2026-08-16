@@ -83,8 +83,8 @@ The **Run** action executes the exact command entered in the dialog through the
 user's configured shell, with values supplied by `dotenvx run`. This is an
 explicit command-execution feature, not a sandbox. The local-request token and
 directory validation prevent an unauthenticated browser request from invoking
-it, but they cannot make an untrusted command safe. Only run commands you
-understand and intend to run.
+it, but they cannot make an untrusted command safe. **Only run commands you
+understand and intend to run.**
 
 ### Verification for v1.2.0
 
