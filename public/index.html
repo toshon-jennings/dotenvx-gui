@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dotenvx GUI</title>
+  <meta name="color-scheme" content="light dark">
+  <!-- Applied before first paint so the chosen desk never flashes. -->
+  <script src="theme-init.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- The seal. Filled when every value in a file is encrypted; an empty
+       impression when any value is plaintext on disk. -->
+  <svg class="svg-symbols" aria-hidden="true">
+    <symbol id="seal-whole" viewBox="0 0 48 48">
+      <path fill="currentColor" fill-rule="evenodd" d="M43.5 24.0C43.0 24.9,41.9 25.6,41.8 26.6C41.7 27.5,42.5 28.5,42.7 29.5C42.9 30.5,43.5 31.9,43.1 32.7C42.7 33.6,41.3 34.0,40.4 34.5C39.5 35.1,38.2 35.1,37.6 35.8C37.0 36.5,37.1 37.8,36.8 38.7C36.4 39.7,36.1 41.2,35.4 41.7C34.6 42.2,33.1 41.8,32.1 41.7C31.1 41.7,30.0 41.0,29.1 41.3C28.2 41.5,27.6 42.7,26.8 43.3C25.9 43.9,24.9 45.0,24.0 45.0C23.1 45.0,22.1 43.9,21.2 43.3C20.4 42.7,19.8 41.5,18.9 41.3C18.0 41.0,16.9 41.7,15.9 41.7C14.9 41.8,13.4 42.2,12.6 41.7C11.9 41.2,11.6 39.7,11.2 38.7C10.9 37.8,11.0 36.5,10.4 35.8C9.8 35.1,8.5 35.1,7.6 34.5C6.7 34.0,5.3 33.6,4.9 32.7C4.5 31.9,5.1 30.5,5.3 29.5C5.5 28.5,6.3 27.5,6.2 26.6C6.1 25.6,5.0 24.9,4.5 24.0C4.0 23.1,3.1 21.9,3.2 21.0C3.3 20.1,4.6 19.3,5.3 18.5C6.0 17.8,7.2 17.4,7.6 16.5C8.0 15.7,7.5 14.5,7.6 13.5C7.7 12.4,7.5 10.9,8.1 10.2C8.7 9.5,10.2 9.5,11.2 9.3C12.3 9.0,13.5 9.4,14.3 8.9C15.0 8.4,15.3 7.1,15.9 6.3C16.5 5.4,17.2 4.1,18.1 3.9C19.0 3.6,20.2 4.3,21.2 4.7C22.2 5.1,23.1 6.0,24.0 6.0C24.9 6.0,25.8 5.1,26.8 4.7C27.8 4.3,29.0 3.6,29.9 3.9C30.8 4.1,31.5 5.4,32.1 6.3C32.7 7.1,33.0 8.4,33.7 8.9C34.5 9.4,35.7 9.0,36.8 9.3C37.8 9.5,39.3 9.5,39.9 10.2C40.5 10.9,40.3 12.4,40.4 13.5C40.5 14.5,40.0 15.7,40.4 16.5C40.8 17.4,42.0 17.8,42.7 18.5C43.4 19.3,44.7 20.1,44.8 21.0C44.9 21.9,44.0 23.1,43.5 24.0ZM24 15.6a4.4 4.4 0 0 0-2.3 8.15l-1.6 7.2a1 1 0 0 0 1 1.25h5.8a1 1 0 0 0 1-1.25l-1.6-7.2A4.4 4.4 0 0 0 24 15.6Z"/>
+    </symbol>
+    <symbol id="seal-open" viewBox="0 0 48 48">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+        <path d="M43.5 24.0C43.0 24.9,41.9 25.6,41.8 26.6C41.7 27.5,42.5 28.5,42.7 29.5C42.9 30.5,43.5 31.9,43.1 32.7C42.7 33.6,41.3 34.0,40.4 34.5C39.5 35.1,38.2 35.1,37.6 35.8C37.0 36.5,37.1 37.8,36.8 38.7C36.4 39.7,36.1 41.2,35.4 41.7C34.6 42.2,33.1 41.8,32.1 41.7C31.1 41.7,30.0 41.0,29.1 41.3C28.2 41.5,27.6 42.7,26.8 43.3C25.9 43.9,24.9 45.0,24.0 45.0C23.1 45.0,22.1 43.9,21.2 43.3C20.4 42.7,19.8 41.5,18.9 41.3C18.0 41.0,16.9 41.7,15.9 41.7C14.9 41.8,13.4 42.2,12.6 41.7C11.9 41.2,11.6 39.7,11.2 38.7C10.9 37.8,11.0 36.5,10.4 35.8C9.8 35.1,8.5 35.1,7.6 34.5C6.7 34.0,5.3 33.6,4.9 32.7C4.5 31.9,5.1 30.5,5.3 29.5C5.5 28.5,6.3 27.5,6.2 26.6C6.1 25.6,5.0 24.9,4.5 24.0C4.0 23.1,3.1 21.9,3.2 21.0C3.3 20.1,4.6 19.3,5.3 18.5C6.0 17.8,7.2 17.4,7.6 16.5C8.0 15.7,7.5 14.5,7.6 13.5C7.7 12.4,7.5 10.9,8.1 10.2C8.7 9.5,10.2 9.5,11.2 9.3C12.3 9.0,13.5 9.4,14.3 8.9C15.0 8.4,15.3 7.1,15.9 6.3C16.5 5.4,17.2 4.1,18.1 3.9C19.0 3.6,20.2 4.3,21.2 4.7C22.2 5.1,23.1 6.0,24.0 6.0C24.9 6.0,25.8 5.1,26.8 4.7C27.8 4.3,29.0 3.6,29.9 3.9C30.8 4.1,31.5 5.4,32.1 6.3C32.7 7.1,33.0 8.4,33.7 8.9C34.5 9.4,35.7 9.0,36.8 9.3C37.8 9.5,39.3 9.5,39.9 10.2C40.5 10.9,40.3 12.4,40.4 13.5C40.5 14.5,40.0 15.7,40.4 16.5C40.8 17.4,42.0 17.8,42.7 18.5C43.4 19.3,44.7 20.1,44.8 21.0C44.9 21.9,44.0 23.1,43.5 24.0Z"/>
+        <path d="M24 15.6a4.4 4.4 0 0 0-2.3 8.15l-1.6 7.2a1 1 0 0 0 1 1.25h5.8a1 1 0 0 0 1-1.25l-1.6-7.2A4.4 4.4 0 0 0 24 15.6Z"/>
+      </g>
+    </symbol>
+  </svg>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <svg class="seal seal-mark" aria-hidden="true"><use href="#seal-whole"></use></svg>
+        <span class="brand-name">dotenvx</span>
+        <span class="brand-tag">gui</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <button class="btn-open" id="btn-open-folder">Open folder</button>
+      <button class="btn-open-manual" id="btn-open-manual">or type a path</button>
+      <div id="current-project" class="current-project"></div>
+    </div>
+    <div class="sidebar-section recent-projects-section">
+      <h3>Recent projects</h3>
+      <ul id="recent-list" class="recent-list"></ul>
+    </div>
+    <div class="sidebar-footer">
+      <div class="version-tag">v1.2.0</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div class="mobile-brand">
+        <svg class="seal seal-mark" aria-hidden="true"><use href="#seal-whole"></use></svg>
+        <span>dotenvx</span>
+      </div>
+      <div class="toolbar-left">
+        <button class="toolbar-btn btn-seal" id="btn-encrypt" disabled>Encrypt file</button>
+        <button class="toolbar-btn btn-caution" id="btn-decrypt" disabled>Decrypt file</button>
+        <button class="toolbar-btn" id="btn-add-var" disabled>Add variable</button>
+        <button class="toolbar-btn" id="btn-run" disabled>Run</button>
+      </div>
+      <div class="toolbar-right">
+        <button class="toolbar-btn" id="btn-lamp">Lamplight</button>
+        <button class="toolbar-btn" id="btn-guide">Help</button>
+      </div>
+    </div>
+
+    <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Environment files"></div>
+
+    <header class="doc-header" id="doc-header" hidden>
+      <div class="doc-id">
+        <span class="doc-label">Environment file</span>
+        <h1 class="doc-name" id="doc-name"></h1>
+      </div>
+      <div class="doc-seal">
+        <svg class="seal" id="doc-seal-icon" aria-hidden="true"><use href="#seal-open" id="doc-seal-use"></use></svg>
+        <div class="doc-seal-text">
+          <span class="doc-seal-state" id="doc-seal-state"></span>
+          <span class="doc-seal-count" id="doc-seal-count"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="editor-area">
+      <table class="var-table" id="var-table" hidden>
+        <thead>
+          <tr><th>Key</th><th>Value</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr>
+        </thead>
+        <tbody id="var-tbody"></tbody>
+      </table>
+
+      <div id="empty-state" class="empty-state">
+        <div class="empty-state-content">
+          <svg class="empty-state-icon" aria-hidden="true"><use href="#seal-open"></use></svg>
+          <h2>No project open</h2>
+          <p>Choose a local folder to read and seal the environment files inside it.</p>
+          <div class="empty-actions">
+            <button class="btn-primary" id="btn-empty-open">Open folder in Finder</button>
+            <button class="btn-secondary" id="btn-empty-guide">How dotenvx works</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="output-panel is-collapsed" id="output-panel">
+      <div class="output-header">
+        <span>Output</span>
+        <div class="output-actions">
+          <button id="toggle-output" type="button" aria-expanded="false" aria-controls="output-content">Show</button>
+          <button id="clear-output" type="button">Clear</button>
+        </div>
+      </div>
+      <div id="output-content" class="output-content"></div>
+    </div>
+  </main>
+
+  <dialog id="folder-dialog">
+    <form method="dialog" id="folder-form">
+      <h2>Open project folder</h2>
+      <label class="sr-only" for="folder-input">Project folder path</label>
+      <input type="text" id="folder-input" placeholder="/path/to/your/project" required>
+      <div class="dialog-actions">
+        <button type="button" class="btn-secondary" id="folder-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" id="folder-submit">Open</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="add-var-dialog">
+    <form method="dialog" id="add-var-form">
+      <h2>Add variable</h2>
+      <label class="sr-only" for="new-key">Variable name</label>
+      <input type="text" id="new-key" placeholder="KEY_NAME" required>
+      <label class="sr-only" for="new-value">Variable value</label>
+      <input type="password" id="new-value" placeholder="value" required>
+      <div class="dialog-actions">
+        <button type="button" class="btn-secondary" id="add-var-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" id="add-var-submit">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="run-dialog">
+    <form method="dialog" id="run-form">
+      <h2>Run with dotenvx</h2>
+      <p class="dialog-desc">The command runs with values from the current project's environment files. Output appears after the command completes.</p>
+      <div class="run-input-wrapper">
+        <span class="run-prefix">dotenvx run --</span>
+        <label class="sr-only" for="run-cmd-input">Command to run</label>
+        <input type="text" id="run-cmd-input" placeholder="npm run dev" required>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn-secondary" id="run-cancel">Cancel</button>
+        <button type="submit" class="btn-primary" id="run-submit">Run command</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="guide-dialog" class="guide-dialog">
+    <div class="guide-modal-header">
+      <div class="guide-title-wrap">
+        <svg class="seal seal-mark" aria-hidden="true"><use href="#seal-whole"></use></svg>
+        <h2>dotenvx guide</h2>
+      </div>
+      <button type="button" class="btn-close-modal" id="guide-close" aria-label="Close guide">✕</button>
+    </div>
+
+    <div class="guide-nav-tabs" role="tablist" aria-label="Guide sections">
+      <button type="button" class="guide-tab-btn active" id="guide-tab-start" role="tab" aria-selected="true" aria-controls="guide-panel-start" data-guide-tab="start">Start</button>
+      <button type="button" class="guide-tab-btn" id="guide-tab-ship" role="tab" aria-selected="false" aria-controls="guide-panel-ship" data-guide-tab="ship">Ship</button>
+      <button type="button" class="guide-tab-btn" id="guide-tab-commands" role="tab" aria-selected="false" aria-controls="guide-panel-commands" data-guide-tab="commands">Commands</button>
+    </div>
+
+    <div class="guide-modal-body">
+      <section class="guide-section active" id="guide-panel-start" role="tabpanel" aria-labelledby="guide-tab-start">
+        <h3>Work with an environment file</h3>
+        <p class="guide-lead">dotenvx keeps encrypted values in your normal <code>.env</code> files and stores the private keys separately.</p>
+        <figure class="guide-run-flow">
+          <div class="guide-run-flow-track">
+            <div class="guide-flow-node">Click <strong>Run</strong></div>
+            <span class="guide-flow-arrow" aria-hidden="true">→</span>
+            <div class="guide-flow-node guide-flow-command"><code>dotenvx run -- your-command</code></div>
+            <span class="guide-flow-arrow" aria-hidden="true">→</span>
+            <div class="guide-flow-inputs">
+              <div class="guide-flow-node">Encrypted <code>.env</code></div>
+              <span aria-hidden="true">+</span>
+              <div class="guide-flow-node guide-flow-key">Private key <code>.env.keys</code></div>
+            </div>
+            <span class="guide-flow-arrow" aria-hidden="true">→</span>
+            <div class="guide-flow-node">Decrypt in memory</div>
+            <span class="guide-flow-arrow" aria-hidden="true">→</span>
+            <div class="guide-flow-node">Inject environment variables</div>
+            <span class="guide-flow-arrow" aria-hidden="true">→</span>
+            <div class="guide-flow-node guide-flow-destination">Start your repo</div>
+          </div>
+          <figcaption>Your encrypted file stays encrypted on disk. dotenvx decrypts its values in memory and passes them to the application process. Some frameworks may also load additional environment files.</figcaption>
+        </figure>
+        <ol class="guide-task-list">
+          <li><span class="task-number">1</span><div><strong>Open a project</strong><p>Choose a folder, then select the environment file you want to work with.</p></div></li>
+          <li><span class="task-number">2</span><div><strong>Edit values</strong><p>Values stay masked until you reveal them. Changes are written through <code>dotenvx set</code>.</p></div></li>
+          <li><span class="task-number">3</span><div><strong>Encrypt before committing</strong><p>Choose <strong>Encrypt file</strong> and confirm every secret value is marked <strong>Encrypted</strong>.</p></div></li>
+        </ol>
+        <div class="guide-file-summary">
+          <div><code>.env</code><span>Commit only after its secret values are encrypted.</span></div>
+          <div class="private-file"><code>.env.keys</code><span>Private decryption keys. Keep this file out of Git.</span></div>
+        </div>
+      </section>
+
+      <section class="guide-section" id="guide-panel-ship" role="tabpanel" aria-labelledby="guide-tab-ship" hidden>
+        <h3>Ship an encrypted environment</h3>
+        <p class="guide-lead">Your repository gets the encrypted file. Your deployment platform gets the matching private key.</p>
+        <ol class="guide-task-list">
+          <li><span class="task-number">1</span><div><strong>Encrypt the selected file</strong><p>For example, encrypt <code>.env.production</code> before staging it.</p></div></li>
+          <li><span class="task-number">2</span><div><strong>Store its private key</strong><p>Copy the matching key from <code>.env.keys</code> into your deployment platform's secret settings.</p></div></li>
+          <li><span class="task-number">3</span><div><strong>Run through dotenvx</strong><p>Start the application with <code>dotenvx run -- your-command</code>.</p></div></li>
+        </ol>
+        <div class="guide-callout warning">
+          <strong>Keep private keys out of version control.</strong>
+          <span>Share them only through your deployment platform or a trusted secret manager.</span>
+        </div>
+      </section>
+
+      <section class="guide-section" id="guide-panel-commands" role="tabpanel" aria-labelledby="guide-tab-commands" hidden>
+        <h3>Related dotenvx commands</h3>
+        <p class="guide-lead">Use these when you prefer the terminal or need a more specific operation.</p>
+        <table class="guide-table">
+          <thead><tr><th>Task</th><th>Command</th></tr></thead>
+          <tbody>
+            <tr><td>Read one value</td><td><code>dotenvx get KEY</code></td></tr>
+            <tr><td>Set one value</td><td><code>dotenvx set KEY "value"</code></td></tr>
+            <tr><td>Encrypt a file</td><td><code>dotenvx encrypt -f .env.production</code></td></tr>
+            <tr><td>Decrypt a file</td><td><code>dotenvx decrypt -f .env.production</code></td></tr>
+            <tr><td>Run an application</td><td><code>dotenvx run -- npm start</code></td></tr>
+            <tr><td>Check required variables</td><td><code>dotenvx validate</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div class="guide-modal-footer">
+      <div class="guide-footer-tip"><span><kbd>⌘O</kbd> Open folder · <kbd>⌘E</kbd> Encrypt file · <kbd>⌘D</kbd> Decrypt file · <kbd>?</kbd> Help</span></div>
+      <button type="button" class="btn-primary" id="guide-done">Close</button>
+    </div>
+  </dialog>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="app.js"></script>
+</body>
+</html>

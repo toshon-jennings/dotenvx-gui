@@ -1,0 +1,1495 @@
+/* ==========================================================================
+   dotenvx GUI — "Sealed manifest"
+
+   The object: an environment file is a document you publish, with its values
+   sealed, while you keep the key. So the interface is a document on a desk —
+   manila stock, hairline rules, typed labels — and encryption is a wax seal.
+
+   Colour carries state, never decoration:
+     wax (bottle green)  a value is encrypted / an action succeeded
+     ochre               plaintext on disk / caution
+     redline             failure, destructive
+     stamp (indigo)      interactive focus and process, never state
+   ========================================================================== */
+
+:root {
+  /* Paper */
+  --desk: #e3ddce;
+  --desk-edge: #dbd4c2;
+  --sheet: #f6f3ec;
+  --sheet-sunk: #eee9dd;
+  --rule: #ddd6c4;
+  --rule-strong: #c6bda6;
+
+  /* Ink */
+  --ink: #1c1813;
+  --ink-soft: #4a4238;
+  --ink-faint: #6e6455;
+
+  /* Marks */
+  --wax: #2f5d42;
+  --wax-hover: #264d36;
+  --wax-wash: rgba(47, 93, 66, 0.1);
+  --wax-edge: rgba(47, 93, 66, 0.4);
+  --ochre: #8a5a08;
+  --ochre-wash: rgba(138, 90, 8, 0.12);
+  --ochre-edge: rgba(138, 90, 8, 0.42);
+  --redline: #a32b1e;
+  --redline-wash: rgba(163, 43, 30, 0.1);
+  --stamp: #2e3f66;
+
+  /* Depth */
+  --backdrop: rgba(28, 24, 19, 0.42);
+  --shadow-lift: 0 18px 44px rgba(28, 24, 19, 0.28);
+  --shadow-rest: 0 6px 18px rgba(28, 24, 19, 0.18);
+
+  color-scheme: light;
+
+  /* Type */
+  --font-display: 'IBM Plex Serif', Georgia, serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* A typed label: every eyebrow, column head and button in the app. */
+  --label: 500 0.6875rem/1 var(--font-mono);
+  --label-track: 0.13em;
+}
+
+/* --- Lamplight -----------------------------------------------------------
+   The same desk after dark: one warm lamp over it. Not a cold slate dark
+   mode — the stock stays brown, the ink stays cream, and the wax and brass
+   are lifted only as far as the lamp would lift them. Opt-in, remembered. */
+
+:root[data-theme='lamplight'] {
+  --desk: #14100b;
+  --desk-edge: #201a13;
+  --sheet: #262019;
+  --sheet-sunk: #1c1710;
+  --rule: #332a1e;
+  --rule-strong: #4b3f2d;
+
+  --ink: #ece2cf;
+  --ink-soft: #b6a992;
+  --ink-faint: #8b7f6a;
+
+  --wax: #5fa87e;
+  --wax-hover: #6fba8e;
+  --wax-wash: rgba(95, 168, 126, 0.13);
+  --wax-edge: rgba(95, 168, 126, 0.42);
+  --ochre: #d2a04c;
+  --ochre-wash: rgba(210, 160, 76, 0.14);
+  --ochre-edge: rgba(210, 160, 76, 0.45);
+  --redline: #d9705c;
+  --redline-wash: rgba(217, 112, 92, 0.14);
+  --stamp: #8aa2d8;
+
+  --backdrop: rgba(8, 6, 4, 0.66);
+  --shadow-lift: 0 18px 44px rgba(0, 0, 0, 0.55);
+  --shadow-rest: 0 6px 18px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: var(--desk);
+  color: var(--ink);
+  font: 0.875rem/1.6 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet-sunk);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+input::placeholder {
+  color: var(--ink-faint);
+  opacity: 0.75;
+}
+
+input:focus {
+  border-color: var(--stamp);
+  background: var(--sheet);
+}
+
+kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink-soft);
+  font: 500 0.6875rem var(--font-mono);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.svg-symbols,
+[hidden] {
+  display: none !important;
+}
+
+/* --- The seal ------------------------------------------------------------
+   One mark, three states. Filled wax when every value in the file is
+   encrypted; an empty impression when any value is plaintext on disk. */
+
+.seal {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.seal-mark {
+  color: var(--wax);
+}
+
+/* --- Sidebar: the stub ---------------------------------------------------
+   Reads as the carbon stub torn off the document: darker stock, perforated
+   edge, and nothing on it but where you have been. */
+
+.sidebar {
+  position: relative;
+  width: 264px;
+  flex: 0 0 264px;
+  display: flex;
+  flex-direction: column;
+  background: var(--desk);
+  border-right: 1px dashed var(--rule-strong);
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  width: 1px;
+  background: var(--desk-edge);
+}
+
+.sidebar-header {
+  height: 62px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font: 600 1rem var(--font-mono);
+  letter-spacing: -0.01em;
+}
+
+.brand-name {
+  color: var(--ink);
+}
+
+.brand-tag {
+  padding: 2px 5px 1px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  color: var(--ink-faint);
+  font: var(--label);
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+}
+
+.sidebar-section {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.recent-projects-section {
+  flex: 1;
+  overflow-y: auto;
+  border-bottom: 0;
+}
+
+.sidebar-section h3 {
+  margin-bottom: 12px;
+  color: var(--ink-faint);
+  font: var(--label);
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+}
+
+.btn-open {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: 500 0.75rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 2px 2px 0 var(--rule-strong);
+  transition: box-shadow 90ms ease, transform 90ms ease;
+}
+
+.btn-open:hover {
+  box-shadow: 3px 3px 0 var(--rule-strong);
+  transform: translate(-1px, -1px);
+}
+
+.btn-open:active {
+  box-shadow: 0 0 0 var(--rule-strong);
+  transform: translate(2px, 2px);
+}
+
+.btn-open-manual {
+  width: 100%;
+  padding: 9px 0 0;
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-decoration-color: var(--rule-strong);
+  text-underline-offset: 3px;
+}
+
+.btn-open-manual:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+.current-project {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.8125rem;
+  word-break: break-all;
+}
+
+.current-project-path {
+  color: var(--ink-faint);
+  font-size: 0.6875rem;
+}
+
+.current-project:empty {
+  display: none;
+}
+
+.current-project strong {
+  font: 600 0.8125rem var(--font-mono);
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.recent-project-btn {
+  width: 100%;
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-left: 2px solid transparent;
+  border-radius: 0 2px 2px 0;
+  text-align: left;
+}
+
+.recent-project-btn:hover {
+  border-left-color: var(--wax);
+  background: var(--sheet);
+}
+
+.recent-name {
+  color: var(--ink);
+  font: 500 0.8125rem var(--font-mono);
+}
+
+.recent-path {
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-empty {
+  padding: 6px 0;
+  color: var(--ink-faint);
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 14px 20px;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.version-tag {
+  color: var(--ink-faint);
+  font: 0.6875rem var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* --- Main shell ---------------------------------------------------------- */
+
+.main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--sheet);
+}
+
+.toolbar {
+  min-height: 62px;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--desk);
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font: 600 0.9375rem var(--font-mono);
+}
+
+/* Every action is a typed label in a hairline box — a form field, not a chip. */
+.toolbar-btn {
+  padding: 7px 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink-soft);
+  font: 500 0.6875rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: border-color 90ms ease, color 90ms ease;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.toolbar-btn.btn-seal:not(:disabled) {
+  border-color: var(--wax-edge);
+  color: var(--wax);
+}
+
+.toolbar-btn.btn-seal:hover:not(:disabled) {
+  border-color: var(--wax);
+  background: var(--wax-wash);
+}
+
+.toolbar-btn.btn-caution:not(:disabled) {
+  border-color: var(--ochre-edge);
+  color: var(--ochre);
+}
+
+.toolbar-btn.btn-caution:hover:not(:disabled) {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+}
+
+/* --- File tabs: dossier tabs --------------------------------------------
+   Inactive tabs sit on the desk; the active one is the same stock as the
+   sheet below it, so the document reads as continuous. */
+
+.file-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 9px 22px 0;
+  background: var(--desk);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.file-tabs:empty {
+  display: none;
+}
+
+.tab {
+  padding: 8px 15px 9px;
+  border: 1px solid var(--rule-strong);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--desk-edge);
+  color: var(--ink-faint);
+  font: 500 0.75rem var(--font-mono);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab.active {
+  background: var(--sheet);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --- Document header: the signature -------------------------------------
+   Filename, and the seal that states exactly how much of this file is
+   encrypted. The count is read from the file's own values, never inferred. */
+
+.doc-header {
+  padding: 18px 22px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--sheet);
+}
+
+.doc-header[hidden] {
+  display: none;
+}
+
+.doc-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-faint);
+  font: var(--label);
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+}
+
+.doc-name {
+  font: 600 1.375rem var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.doc-seal {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-align: right;
+}
+
+.doc-seal .seal {
+  order: 2;
+  width: 44px;
+  height: 44px;
+}
+
+.doc-seal-text {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-seal-state {
+  font: 600 0.75rem var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.doc-seal-count {
+  color: var(--ink-faint);
+  font: 0.6875rem var(--font-mono);
+}
+
+.doc-header.is-sealed .seal,
+.doc-header.is-sealed .doc-seal-state {
+  color: var(--wax);
+}
+
+.doc-header.is-open .seal,
+.doc-header.is-open .doc-seal-state {
+  color: var(--ochre);
+}
+
+.doc-header.is-empty .seal,
+.doc-header.is-empty .doc-seal-state {
+  color: var(--ink-faint);
+}
+
+/* The one orchestrated moment: the seal presses onto the sheet. */
+.doc-header.just-sealed .seal {
+  animation: press 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes press {
+  0% { transform: scale(1.5) rotate(-9deg); opacity: 0; }
+  55% { transform: scale(0.94) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* --- Ledger -------------------------------------------------------------- */
+
+.editor-area {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  background: var(--sheet);
+}
+
+.var-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.var-table th {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--rule-strong);
+  color: var(--ink-faint);
+  font: var(--label);
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+}
+
+.var-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: middle;
+}
+
+.var-table tbody tr {
+  animation: settle 260ms ease both;
+}
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(3px); }
+}
+
+.var-table tbody tr:hover {
+  background: var(--wax-wash);
+}
+
+.cell-key {
+  width: 26%;
+  color: var(--ink);
+  font: 600 0.8125rem var(--font-mono);
+}
+
+/* The ruled, tinted column is the ledger's own convention for the recorded
+   value — vertical rules are what separate a ledger from a plain table. */
+.var-table th:nth-child(2),
+.cell-value {
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+}
+
+.cell-value {
+  width: 40%;
+  background: var(--sheet-sunk);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.var-table tbody tr:hover .cell-value {
+  background: transparent;
+}
+
+.value-display {
+  display: flex;
+  align-items: center;
+  min-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.value-input {
+  padding: 3px 7px;
+  font-size: 0.8125rem;
+}
+
+.cell-status {
+  width: 16%;
+}
+
+/* Badges mirror the big seal: filled impression, or an empty one. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 0.625rem var(--font-mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.badge.encrypted {
+  color: var(--wax);
+}
+
+.badge.encrypted::before {
+  background: var(--wax);
+}
+
+.badge.plain {
+  color: var(--ochre);
+}
+
+.badge.plain::before {
+  border: 1.5px solid var(--ochre);
+}
+
+.cell-actions {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.action-btn {
+  padding: 4px 6px;
+  border-radius: 2px;
+  color: var(--ink-faint);
+  font: 500 0.6875rem var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.action-btn:hover {
+  background: var(--sheet-sunk);
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.action-btn.delete:hover {
+  background: var(--redline-wash);
+  color: var(--redline);
+}
+
+.table-empty {
+  padding: 48px 14px;
+  color: var(--ink-faint);
+  font-style: italic;
+  text-align: center;
+}
+
+/* --- Empty state: an unstamped form -------------------------------------- */
+
+.empty-state {
+  height: 100%;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.empty-state-content {
+  max-width: 430px;
+  padding: 38px 34px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: 3px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 6px;
+  color: var(--rule-strong);
+}
+
+.empty-state h2 {
+  font: 600 1.25rem var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.empty-state p {
+  max-width: 34ch;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.empty-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 9px 16px;
+  border-radius: 2px;
+  font: 500 0.6875rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  border: 1px solid var(--wax);
+  background: var(--wax);
+  color: var(--sheet);
+}
+
+.btn-primary:hover {
+  border-color: var(--wax-hover);
+  background: var(--wax-hover);
+}
+
+.btn-secondary {
+  border: 1px solid var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink-soft);
+}
+
+.btn-secondary:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* --- Output: the running transcript -------------------------------------- */
+
+.output-panel {
+  height: 210px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px dashed var(--rule-strong);
+  background: var(--desk);
+  transition: height 160ms ease;
+}
+
+.output-panel.is-collapsed {
+  height: 34px;
+}
+
+.output-panel.is-collapsed .output-content {
+  display: none;
+}
+
+.output-header {
+  min-height: 34px;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ink-faint);
+  font: var(--label);
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+}
+
+.output-actions {
+  display: flex;
+  gap: 14px;
+}
+
+.output-actions button {
+  color: var(--ink-faint);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: uppercase;
+}
+
+.output-actions button:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.output-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 22px 14px;
+  white-space: pre-wrap;
+  font: 0.75rem/1.6 var(--font-mono);
+}
+
+.log-entry {
+  display: flex;
+  gap: 10px;
+}
+
+.log-time {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+  opacity: 0.8;
+}
+
+.log-info { color: var(--ink-soft); }
+.log-success { color: var(--wax); }
+.log-error { color: var(--redline); }
+
+/* --- Dialogs: a slip laid on the desk ------------------------------------ */
+
+dialog {
+  width: min(460px, calc(100vw - 32px));
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-top: 3px solid var(--wax);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+}
+
+dialog::backdrop {
+  background: var(--backdrop);
+}
+
+dialog form {
+  padding: 24px;
+}
+
+dialog h2 {
+  margin-bottom: 16px;
+  font: 600 1.0625rem var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+dialog input + label,
+dialog input + input,
+dialog label + input + label {
+  margin-top: 10px;
+}
+
+.dialog-desc {
+  margin: -8px 0 16px;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.dialog-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.run-input-wrapper {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet-sunk);
+}
+
+.run-input-wrapper:focus-within {
+  border-color: var(--stamp);
+}
+
+.run-prefix {
+  padding: 9px 11px;
+  border-right: 1px solid var(--rule-strong);
+  background: var(--desk-edge);
+  color: var(--stamp);
+  font: 500 0.75rem var(--font-mono);
+  white-space: nowrap;
+}
+
+.run-input-wrapper input {
+  border: 0;
+  background: transparent;
+}
+
+.run-input-wrapper input:focus {
+  background: transparent;
+}
+
+/* --- Guide --------------------------------------------------------------- */
+
+.guide-dialog {
+  display: none;
+  width: min(740px, calc(100vw - 40px));
+  height: min(700px, calc(100vh - 40px));
+  max-width: none;
+}
+
+.guide-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.guide-modal-header {
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--desk);
+}
+
+.guide-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-title-wrap h2 {
+  margin: 0;
+  font: 600 1.0625rem var(--font-mono);
+  letter-spacing: -0.01em;
+}
+
+.btn-close-modal {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 2px;
+  color: var(--ink-faint);
+  font-size: 0.9375rem;
+}
+
+.btn-close-modal:hover {
+  background: var(--sheet);
+  color: var(--ink);
+}
+
+.guide-nav-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 9px 22px 0;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--desk);
+}
+
+.guide-tab-btn {
+  padding: 8px 15px 9px;
+  border: 1px solid var(--rule-strong);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--desk-edge);
+  color: var(--ink-faint);
+  font: 500 0.75rem var(--font-mono);
+}
+
+.guide-tab-btn:hover {
+  color: var(--ink);
+}
+
+.guide-tab-btn.active {
+  background: var(--sheet);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.guide-modal-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+  background: var(--sheet);
+}
+
+.guide-section[hidden] {
+  display: none;
+}
+
+.guide-section h3 {
+  margin-bottom: 8px;
+  font: 600 1.375rem var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+.guide-lead {
+  max-width: 62ch;
+  margin-bottom: 24px;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+
+.guide-section code,
+.guide-table code {
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: var(--sheet-sunk);
+  color: var(--ink);
+}
+
+/* Routing slip: how a value gets from the sealed file into the process. */
+.guide-run-flow {
+  margin: 0 0 26px;
+  padding: 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--desk-edge);
+}
+
+.guide-run-flow-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.guide-flow-node {
+  min-height: 56px;
+  padding: 9px 8px;
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink-soft);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Filenames and commands are read as whole tokens — never broken mid-word. */
+.guide-flow-node code {
+  background: none;
+  font-size: 0.625rem;
+  overflow-wrap: normal;
+}
+
+.guide-flow-command {
+  flex-grow: 1.75;
+}
+
+.guide-flow-command code {
+  overflow-wrap: anywhere;
+}
+
+.guide-flow-inputs {
+  display: grid;
+  align-items: center;
+  gap: 3px;
+  flex: 1.45 1 0;
+  color: var(--ink-faint);
+  font: 600 0.6875rem var(--font-mono);
+  text-align: center;
+}
+
+.guide-flow-inputs .guide-flow-node {
+  min-height: 40px;
+  width: 100%;
+}
+
+.guide-flow-key {
+  border-color: var(--ochre-edge);
+  background: var(--ochre-wash);
+}
+
+.guide-flow-key code {
+  color: var(--ochre);
+}
+
+.guide-flow-destination {
+  border-color: var(--wax-edge);
+  background: var(--wax-wash);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.guide-flow-arrow {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.guide-run-flow figcaption {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule-strong);
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.guide-task-list {
+  list-style: none;
+}
+
+.guide-task-list li {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 14px;
+  padding: 15px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.guide-task-list li:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+/* A real sequence — you cannot encrypt a file you have not opened. */
+.task-number {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule-strong);
+  border-radius: 50%;
+  color: var(--ink-faint);
+  font: 500 0.6875rem var(--font-mono);
+}
+
+.guide-task-list li > div > strong {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.guide-task-list p {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.guide-file-summary {
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+}
+
+.guide-file-summary > div {
+  padding: 13px 15px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  background: var(--sheet);
+}
+
+.guide-file-summary > div + div {
+  border-top: 1px solid var(--rule);
+}
+
+.guide-file-summary span {
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.guide-file-summary .private-file {
+  background: var(--ochre-wash);
+}
+
+.guide-file-summary .private-file code {
+  background: none;
+  color: var(--ochre);
+  font-weight: 600;
+}
+
+.guide-callout {
+  margin-top: 22px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--rule-strong);
+  border-radius: 2px;
+}
+
+.guide-callout.warning {
+  border-color: var(--ochre-edge);
+  border-left-color: var(--ochre);
+  background: var(--ochre-wash);
+}
+
+.guide-callout.warning strong {
+  color: var(--ochre);
+}
+
+.guide-callout span {
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--rule-strong);
+}
+
+.guide-table th {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--desk-edge);
+  color: var(--ink-faint);
+  font: var(--label);
+  letter-spacing: var(--label-track);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.guide-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.guide-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.guide-modal-footer {
+  padding: 13px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--rule-strong);
+  background: var(--desk);
+}
+
+.guide-footer-tip {
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+}
+
+/* --- Toasts: a stamp on the corner of the page --------------------------- */
+
+.toast-container {
+  position: fixed;
+  z-index: 1000;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: 2px;
+  background: var(--sheet);
+  font-size: 0.8125rem;
+  box-shadow: var(--shadow-rest);
+  animation: stamp-in 200ms cubic-bezier(0.2, 1.3, 0.5, 1);
+}
+
+.toast:has(.success) { border-left-color: var(--wax); }
+.toast:has(.error) { border-left-color: var(--redline); }
+.toast:has(.info) { border-left-color: var(--stamp); }
+
+.toast-icon {
+  font-size: 0.875rem;
+}
+
+.toast-icon.success { color: var(--wax); }
+.toast-icon.error { color: var(--redline); }
+.toast-icon.info { color: var(--stamp); }
+
+.toast.slide-out {
+  animation: stamp-out 160ms ease-in forwards;
+}
+
+@keyframes stamp-in {
+  from { opacity: 0; transform: translateY(-5px) scale(0.97); }
+}
+
+@keyframes stamp-out {
+  to { opacity: 0; transform: translateY(-5px); }
+}
+
+/* --- Responsive ---------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    min-height: 100vh;
+  }
+
+  .toolbar {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+
+  .mobile-brand {
+    display: flex;
+  }
+
+  .toolbar-left {
+    width: 100%;
+    order: 3;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-right {
+    margin-left: auto;
+  }
+
+  .toolbar-btn:disabled {
+    display: none;
+  }
+
+  .file-tabs,
+  .doc-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .doc-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .doc-seal {
+    flex-direction: row-reverse;
+    text-align: left;
+  }
+
+  .doc-name {
+    font-size: 1.125rem;
+  }
+
+  .empty-state {
+    padding: 22px;
+  }
+
+  .empty-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .guide-dialog {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+  }
+
+  .guide-modal-body {
+    padding: 22px 18px;
+  }
+
+  .guide-file-summary > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .guide-run-flow-track {
+    flex-direction: column;
+  }
+
+  .guide-flow-node,
+  .guide-flow-command,
+  .guide-flow-inputs {
+    width: 100%;
+  }
+
+  .guide-flow-arrow {
+    transform: rotate(90deg);
+  }
+
+  .guide-modal-footer {
+    justify-content: flex-end;
+  }
+
+  .guide-footer-tip {
+    display: none;
+  }
+
+  .output-content,
+  .output-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .var-table {
+    min-width: 640px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .btn-open:hover,
+  .btn-open:active {
+    transform: none;
+  }
+}
