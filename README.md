@@ -20,8 +20,12 @@ npm install
 npm start
 ```
 
-Open `http://127.0.0.1:7843`, choose a project folder, and select an
-environment file.
+Launching prints a link that ends in `#token=…`. Open that exact link, choose a
+project folder, and select an environment file. The fragment carries this
+launch's API token to the page; browsers never send a fragment over the network,
+and the server never hands the token out over HTTP, so no other local program
+can obtain it. Opening `http://127.0.0.1:7843` on its own leaves the interface
+without a token and it will say so.
 
 It can also be launched directly from npm:
 
@@ -31,7 +35,7 @@ npx dotenvx-gui
 
 ## Release readiness
 
-dotenvx GUI v1.2.0 is ready for an **initial** public release. That is a narrow,
+dotenvx GUI v1.3.0 is ready for an **initial** public release. That is a narrow,
 evidence-backed statement—not a claim that software which reads secrets,
 rewrites files, and launches commands can ever be risk-free.
 
@@ -64,18 +68,25 @@ environment files directly and does not need this app.
 | Concern | What dotenvx GUI does |
 | --- | --- |
 | LAN or internet exposure | The server binds to `127.0.0.1`, never every network interface. Changing `DOTENVX_GUI_PORT` changes only the port, not the host. |
-| A hostile website reaching localhost | Requests must use an exact local `Host`; hostile `Origin` values and cross-site Fetch Metadata are rejected. Every API operation after bootstrap also requires a random per-launch token in a custom header. |
+| A hostile website reaching localhost | Requests must use an exact local `Host`; hostile `Origin` values and cross-site Fetch Metadata are rejected. Every API operation also requires a random per-launch token in a custom header. |
+| Another local program collecting the token | The token is never served over HTTP. It is printed at launch and reaches the page through the URL fragment, so there is no endpoint a local process can ask for it. |
 | Reading or changing an arbitrary file | Paths are resolved to their real filesystem location, must remain inside the user's home directory, and must name an existing regular `.env*` file. Symbolic-link environment files and `.env.keys` are rejected. |
 | Shell syntax hidden in a variable value | Add, encrypt, and decrypt operations use a fixed executable with an argument array. Values are not interpolated into a shell command string. |
+| A secret appearing in a process listing | Adding a value sends it to the dotenvx helper over stdin. The plaintext never becomes a command-line argument, so `ps` and endpoint monitoring that logs full command lines cannot capture it. |
 | Environment data becoming browser code | Dynamic values are inserted with DOM construction and `textContent`, not HTML-parsing APIs. A strict Content Security Policy allows only same-origin scripts and blocks inline script and `eval`. |
 | Accidental resource exhaustion or information leakage | JSON bodies are capped at 32 KiB, child output at 1 MiB, commands have timeouts, sensitive responses are not cached, and unexpected server errors return a generic message rather than a stack trace. |
 | Publishing local secrets or development debris | The npm package has an explicit file allowlist. `.env.keys`, environment files, tests, design artifacts, editor state, and generated output are excluded. |
 
-The per-launch token is not a password against other local programs. A local
-program can request it, just as that program can read the files directly. The
-token is a browser-request capability: together with exact Host and Origin
-checks, Fetch Metadata, a custom header, and the browser's same-origin policy,
-it prevents a blind cross-site form from invoking privileged API operations.
+The per-launch token is a capability held by the page, not a password for the
+account. Together with exact Host and Origin checks, Fetch Metadata, a custom
+header, and the browser's same-origin policy, it prevents a blind cross-site
+form from invoking privileged API operations. Because the Host and Origin checks
+only constrain browsers, the token must not be obtainable over HTTP either — a
+local process that is not a browser sends a valid `Host` and no `Origin`, so any
+endpoint that dispensed the token would dispense it to exactly the callers the
+token exists to exclude. It is therefore printed at launch and carried in the
+URL fragment instead. A program already running as the same user can still read
+the environment files directly; the token does not claim to stop that.
 
 ### Run is intentionally powerful
 
@@ -86,22 +97,26 @@ directory validation prevent an unauthenticated browser request from invoking
 it, but they cannot make an untrusted command safe. **Only run commands you
 understand and intend to run.**
 
-### Verification for v1.2.0
+### Verification for v1.3.0
 
-- All 9 Node tests pass, including a real encrypt/decrypt round trip using the
-  bundled `@dotenvx/dotenvx` package and disposable dummy values.
+- All 11 Node tests pass, including real encrypt/decrypt and encrypted-set round
+  trips using the bundled `@dotenvx/dotenvx` package and disposable dummy values.
 - Security regressions cover missing tokens, hostile hosts and origins,
-  cross-site requests, outside-home paths, symbolic links, non-environment
-  files, literal subprocess arguments, file-mode preservation, and unsafe HTML
-  parsing sinks.
+  cross-site requests, token disclosure on every unauthenticated route,
+  plaintext values in a subprocess command line, outside-home paths, symbolic
+  links, non-environment files, file-mode preservation, and unsafe HTML parsing
+  sinks.
 - `npm audit --omit=dev` reports 0 known vulnerabilities.
-- Syntax checks pass for the server and both browser scripts.
-- A clean package dry run contains exactly 11 intended files.
-- A clean tarball installation and executable launch passed on an isolated
-  loopback port.
-- Live checks returned `200` for session bootstrap, `401` without a token,
-  `200` with the token, and `403` for a hostile origin.
-- The live listener was confirmed as `127.0.0.1:7843`.
+- Syntax checks pass for the server, the dotenvx set helper, and both browser
+  scripts.
+- A clean package dry run contains exactly 12 intended files.
+- A clean tarball installation performed an encrypted set on an isolated
+  loopback port, confirming the helper ships and resolves dotenvx correctly.
+- Live checks returned `401` for `/api/session` and `/api/recent` without a
+  token, `200` with the token, and `403` for a hostile origin. No
+  unauthenticated response body contained the token.
+- Loading the printed link, reloading the page, and loading the bare address
+  without a token were each checked in a browser.
 - Desktop and mobile browser checks passed for loading, Help, theme switching,
   responsive layout, and console health.
 - CI repeats syntax, tests, dependency audit, and package inspection on macOS
@@ -144,7 +159,7 @@ dummy values rather than real credentials.
 
 - **Encrypt file** encrypts the selected environment file.
 - **Decrypt file** decrypts the selected file after a plaintext warning.
-- **Add variable** writes a value through `dotenvx set`.
+- **Add variable** writes a value through `dotenvx set`, handing the value to the helper on stdin so it never appears in a process listing.
 - **Run** executes a command through `dotenvx run --` and shows its output when the command completes.
 
 ## Shortcuts

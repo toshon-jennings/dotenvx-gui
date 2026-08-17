@@ -85,8 +85,14 @@ function runProcess(executable, args, options = {}) {
     const child = spawn(executable, args, {
       cwd: options.cwd,
       env: options.env || process.env,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: [options.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe']
     });
+    if (options.input !== undefined) {
+      // The child may exit before the write drains; a broken pipe here is not
+      // the failure worth reporting, the exit code is.
+      child.stdin.on('error', () => {});
+      child.stdin.end(options.input);
+    }
     let stdout = '';
     let stderr = '';
     let outputBytes = 0;
@@ -135,6 +141,10 @@ function getDotenvxCliPath() {
   return path.join(path.dirname(packagePath), 'src', 'cli', 'dotenvx.js');
 }
 
+function getSetRunnerPath() {
+  return path.join(__dirname, 'lib', 'dotenvx-set.js');
+}
+
 function atomicWriteFile(filePath, content) {
   const mode = fs.statSync(filePath).mode & 0o777;
   const tempPath = `${filePath}.dotenvx-gui-${process.pid}-${crypto.randomBytes(6).toString('hex')}.tmp`;
@@ -165,6 +175,7 @@ function createApp(options = {}) {
   const apiToken = options.apiToken || crypto.randomBytes(32).toString('base64url');
   const commandRunner = options.commandRunner || runProcess;
   const dotenvxCli = options.dotenvxCli || getDotenvxCliPath();
+  const setRunner = options.setRunner || getSetRunnerPath();
   const app = express();
 
   app.disable('x-powered-by');
@@ -205,11 +216,11 @@ function createApp(options = {}) {
     next();
   });
 
-  app.get('/api/session', (req, res) => {
-    res.set('Cache-Control', 'no-store');
-    res.json({ success: true, data: { token: apiToken } });
-  });
-
+  // The launch token is never served over HTTP. The Host, Origin, and Fetch
+  // Metadata checks above only constrain browsers; any other local process can
+  // send a valid Host and no Origin, so an endpoint that hands out the token
+  // would hand it to exactly the callers the token exists to keep out. It
+  // reaches the page through the URL fragment printed at launch instead.
   app.use('/api', (req, res, next) => {
     const supplied = req.get('X-Dotenvx-GUI-Token');
     const expectedToken = Buffer.from(apiToken);
@@ -273,7 +284,13 @@ function createApp(options = {}) {
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
       throw new HttpError(400, 'key must be a valid environment variable name');
     }
-    const result = await runDotenvx(['set', key, value, '-f', file], { cwd: path.dirname(file) });
+    // The value travels over stdin rather than argv: same-user processes can
+    // read a command line out of `ps`, and endpoint monitoring routinely logs
+    // full command lines and ships them off the machine.
+    const result = await commandRunner(process.execPath, [setRunner], {
+      cwd: path.dirname(file),
+      input: JSON.stringify({ key, value, file })
+    });
     res.json({ success: true, data: result });
   });
 
@@ -393,7 +410,11 @@ function startServer(options = {}) {
       return;
     }
     const address = server.address();
-    console.log(`dotenvx GUI ready at http://${host}:${address.port}`);
+    // The fragment carries this launch's API token to the page. Browsers never
+    // put a fragment on the wire, so the token stays out of request logs, and
+    // no local process can ask the server for it.
+    console.log(`dotenvx GUI ready at http://${host}:${address.port}/#token=${instance.apiToken}`);
+    console.log('Open that exact link — the interface cannot reach the API without it.');
   });
   return { ...instance, server };
 }

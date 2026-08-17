@@ -18,5 +18,8 @@ Only the latest published release receives security fixes.
 ## Local security boundary
 
 The server binds to `127.0.0.1`, validates the request host and origin, and
-requires a per-launch token for API operations. Do not expose port 7843 through
-a tunnel, reverse proxy, container port mapping, or firewall rule.
+requires a per-launch token for API operations. The token is never served over
+HTTP: it is printed at launch and reaches the interface through the URL
+fragment, so the link printed at startup should be treated as a credential. Do
+not expose port 7843 through a tunnel, reverse proxy, container port mapping, or
+firewall rule.

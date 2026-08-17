@@ -1,6 +1,6 @@
 {
   "name": "dotenvx-gui",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Local web GUI for dotenvx — browse, edit, encrypt/decrypt .env files visually",
   "main": "server.js",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "files": [
     "bin",
+    "lib",
     "public",
     "server.js",
     "LICENSE",
@@ -18,11 +19,16 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check public/theme-init.js",
+    "check": "node --check server.js && node --check lib/dotenvx-set.js && node --check public/app.js && node --check public/theme-init.js",
     "test": "node --test",
     "prepack": "npm run check && npm test"
   },
-  "keywords": ["dotenvx", "env", "gui", "environment-variables"],
+  "keywords": [
+    "dotenvx",
+    "env",
+    "gui",
+    "environment-variables"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
