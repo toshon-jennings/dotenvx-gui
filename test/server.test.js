@@ -34,6 +34,7 @@ async function createFixture(t, options = {}) {
     apiToken: 'test-token',
     ...(options.realCommands ? {} : {
       dotenvxCli: '/fake/dotenvx.js',
+      setRunner: '/fake/set-runner.js',
       commandRunner
     })
   };
@@ -57,6 +58,11 @@ async function createFixture(t, options = {}) {
       ...options.headers
     };
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+    // An explicit undefined omits the header, so a test can model a caller
+    // that is not a browser and therefore sends no Origin at all.
+    for (const [name, value] of Object.entries(headers)) {
+      if (value === undefined) delete headers[name];
+    }
     return fetch(`${baseUrl}${route}`, {
       method: options.method || 'GET',
       headers,
@@ -80,14 +86,13 @@ async function createFixture(t, options = {}) {
   return { apiToken, baseUrl, calls, envFile, home, project, recentFile, request, requestWithHost, root };
 }
 
-test('session bootstrap is no-store and API routes require the launch token', async t => {
+test('API routes require the launch token', async t => {
   const fixture = await createFixture(t);
-  const session = await fixture.request('/api/session', { token: false });
-  assert.equal(session.status, 200);
-  assert.equal(session.headers.get('cache-control'), 'no-store');
-  assert.equal(session.headers.get('x-powered-by'), null);
-  assert.match(session.headers.get('content-security-policy'), /script-src 'self'/);
-  assert.equal((await session.json()).data.token, fixture.apiToken);
+  const recent = await fixture.request('/api/recent');
+  assert.equal(recent.status, 200);
+  assert.equal(recent.headers.get('cache-control'), 'no-store');
+  assert.equal(recent.headers.get('x-powered-by'), null);
+  assert.match(recent.headers.get('content-security-policy'), /script-src 'self'/);
   assert.equal(fs.statSync(fixture.recentFile).mode & 0o777, 0o600);
 
   const unauthorized = await fixture.request('/api/recent', { token: false });
@@ -99,20 +104,36 @@ test('session bootstrap is no-store and API routes require the launch token', as
   assert.equal(malformedToken.status, 401);
 });
 
+test('no unauthenticated response hands out the launch token', async t => {
+  const fixture = await createFixture(t);
+
+  // The Host, Origin, and Fetch Metadata checks only constrain browsers. A
+  // local process that is not a browser sends a valid Host and no Origin, so
+  // anything reachable without the token must not disclose it — otherwise the
+  // token stops any caller from reaching /api/run, which executes commands.
+  const routes = ['/api/session', '/api/recent', '/', '/index.html', '/app.js'];
+  for (const route of routes) {
+    const response = await fixture.request(route, { token: false, headers: { Origin: undefined } });
+    if (route.startsWith('/api')) {
+      assert.equal(response.status, 401, `${route} answered an unauthenticated API call`);
+    }
+    const body = await response.text();
+    assert.equal(body.includes(fixture.apiToken), false, `${route} disclosed the launch token`);
+  }
+});
+
 test('untrusted hosts, origins, and cross-site requests are rejected', async t => {
   const fixture = await createFixture(t);
 
-  const badHost = await fixture.requestWithHost('/api/session', 'attacker.example');
+  const badHost = await fixture.requestWithHost('/api/recent', 'attacker.example');
   assert.equal(badHost.statusCode, 403);
 
-  const badOrigin = await fixture.request('/api/session', {
-    token: false,
+  const badOrigin = await fixture.request('/api/recent', {
     headers: { Origin: 'https://attacker.example' }
   });
   assert.equal(badOrigin.status, 403);
 
-  const crossSite = await fixture.request('/api/session', {
-    token: false,
+  const crossSite = await fixture.request('/api/recent', {
     headers: { 'Sec-Fetch-Site': 'cross-site' }
   });
   assert.equal(crossSite.status, 403);
@@ -134,23 +155,31 @@ test('path validation rejects files outside home, symlinks, and non-env files', 
   assert.equal(validator.environmentFile(fixture.envFile), fs.realpathSync(fixture.envFile));
 });
 
-test('dotenvx values are passed as literal subprocess arguments', async t => {
+test('set keeps the plaintext value out of the subprocess command line', async t => {
   const fixture = await createFixture(t);
-  const injectedValue = '$(touch should-not-run)';
+  const secretValue = '$(touch should-not-run)';
   const response = await fixture.request('/api/set', {
     method: 'POST',
-    body: { file: fixture.envFile, key: 'SAFE_KEY', value: injectedValue }
+    body: { file: fixture.envFile, key: 'SAFE_KEY', value: secretValue }
   });
   assert.equal(response.status, 200);
   assert.equal(fixture.calls.length, 1);
-  assert.deepEqual(fixture.calls[0].args, [
-    '/fake/dotenvx.js',
-    'set',
-    'SAFE_KEY',
-    injectedValue,
-    '-f',
-    fs.realpathSync(fixture.envFile)
-  ]);
+
+  // `ps` and endpoint monitoring both read argv, so the value must not be
+  // there — not the whole value and not any fragment of it.
+  const [call] = fixture.calls;
+  assert.equal(call.executable, process.execPath);
+  assert.deepEqual(call.args, ['/fake/set-runner.js']);
+  assert.equal(call.args.concat(call.executable).some(arg => arg.includes(secretValue)), false);
+
+  // It reaches the runner over stdin instead, still as literal data rather
+  // than anything a shell could interpret.
+  assert.deepEqual(JSON.parse(call.options.input), {
+    key: 'SAFE_KEY',
+    value: secretValue,
+    file: fs.realpathSync(fixture.envFile)
+  });
+  assert.equal(call.options.cwd, fs.realpathSync(fixture.project));
 });
 
 test('Run is token-gated and invokes the configured shell through dotenvx', async t => {
@@ -225,4 +254,20 @@ test('bundled dotenvx encrypts and decrypts a disposable environment file', asyn
   });
   assert.equal(decrypted.status, 200);
   assert.match(fs.readFileSync(fixture.envFile, 'utf8'), /PUBLIC_VALUE=hello/);
+});
+
+test('bundled dotenvx encrypts a value delivered over stdin', async t => {
+  const fixture = await createFixture(t, { realCommands: true });
+  fs.writeFileSync(fixture.envFile, 'PUBLIC_VALUE=hello\n');
+
+  const response = await fixture.request('/api/set', {
+    method: 'POST',
+    body: { file: fixture.envFile, key: 'PIPED_SECRET', value: 'disposable-dummy-value' }
+  });
+  assert.equal(response.status, 200);
+
+  const contents = fs.readFileSync(fixture.envFile, 'utf8');
+  assert.match(contents, /PIPED_SECRET=.*encrypted:/);
+  assert.equal(contents.includes('disposable-dummy-value'), false);
+  assert.equal(fs.existsSync(path.join(fixture.project, '.env.keys')), true);
 });

@@ -90,12 +90,12 @@ function setTheme(lamplight) {
 
 // ---- API Layer ----
 
-async function api(endpoint, method = 'GET', body = null, authenticated = true) {
+async function api(endpoint, method = 'GET', body = null) {
   const opts = {
     method,
     headers: { Accept: 'application/json' }
   };
-  if (authenticated && apiToken) opts.headers['X-Dotenvx-GUI-Token'] = apiToken;
+  if (apiToken) opts.headers['X-Dotenvx-GUI-Token'] = apiToken;
   if (body) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
@@ -110,22 +110,63 @@ async function api(endpoint, method = 'GET', body = null, authenticated = true) 
   return json.data;
 }
 
+// ---- Session ----
+// The launch token arrives in the URL fragment of the link the server prints.
+// The server never hands it out over HTTP, because anything it would answer a
+// browser with, it would equally answer any other local program with.
+
+const TOKEN_KEY = 'dotenvx-gui-token';
+
+function claimToken() {
+  const fromHash = new URLSearchParams(location.hash.slice(1)).get('token');
+  if (!fromHash) {
+    // A reload has no fragment left to read; the tab kept its own copy.
+    try {
+      return sessionStorage.getItem(TOKEN_KEY);
+    } catch (e) {
+      return null;
+    }
+  }
+  try {
+    sessionStorage.setItem(TOKEN_KEY, fromHash);
+  } catch (e) {
+    // Private mode — the token just will not survive a reload.
+  }
+  // Keep it out of the address bar, bookmarks, and browser history.
+  history.replaceState(null, '', location.pathname + location.search);
+  return fromHash;
+}
+
+function failSession(message) {
+  apiToken = null;
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch (e) {
+    // Nothing stored to clear.
+  }
+  appendOutput(message, 'error');
+  showToast('Local session unavailable', 'error');
+  els.btnOpen.disabled = true;
+  els.btnOpenManual.disabled = true;
+  if (els.btnEmptyOpen) els.btnEmptyOpen.disabled = true;
+}
+
 // ---- Core Functions ----
 
 async function init() {
   setTheme(isLamplight());
   setupEventListeners();
+  apiToken = claimToken();
+  if (!apiToken) {
+    failSession('No launch token in this address. Open the exact link printed by dotenvx-gui.');
+    return;
+  }
   try {
-    const session = await api('/api/session', 'GET', null, false);
-    apiToken = session.token;
-    await loadRecent();
+    state.recentProjects = (await api('/api/recent')) || [];
+    renderRecent();
     appendOutput('dotenvx GUI ready. Open a project folder to begin.', 'info');
   } catch (err) {
-    appendOutput(`Could not establish a secure local session: ${err.message}`, 'error');
-    showToast('Local session unavailable', 'error');
-    els.btnOpen.disabled = true;
-    els.btnOpenManual.disabled = true;
-    if (els.btnEmptyOpen) els.btnEmptyOpen.disabled = true;
+    failSession(`Could not establish a secure local session: ${err.message}`);
   }
 }
 
