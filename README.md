@@ -23,7 +23,7 @@ npm start
 Open `http://127.0.0.1:7843`, choose a project folder, and select an
 environment file.
 
-Once published to npm, it can also be launched with:
+It can also be launched directly from npm:
 
 ```bash
 npx dotenvx-gui
