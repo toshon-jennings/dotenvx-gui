@@ -1,7 +1,12 @@
 node_modules/
+dist/
+dist-electron/
+dist-swift/
+.build/
 .env.keys
 .DS_Store
 .claude/
 output/
 *.tgz
 npm-debug.log*
+RFC_SWIFT_REWRITE.md

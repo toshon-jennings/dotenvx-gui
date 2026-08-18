@@ -2,6 +2,7 @@
   "name": "dotenvx-gui",
   "version": "1.2.0",
   "description": "Local web GUI for dotenvx — browse, edit, encrypt/decrypt .env files visually",
+  "author": "Toshon Jennings",
   "main": "server.js",
   "bin": {
     "dotenvx-gui": "bin/dotenvx-gui.js"
@@ -20,9 +21,18 @@
     "dev": "node server.js",
     "check": "node --check server.js && node --check public/app.js && node --check public/theme-init.js",
     "test": "node --test",
-    "prepack": "npm run check && npm test"
+    "prepack": "npm run check && npm test",
+    "desktop:dev": "electron electron/main.cjs",
+    "desktop:build": "electron-builder --mac dir",
+    "native:test": "swift test",
+    "native:build": "./scripts/build-native-app.sh"
   },
-  "keywords": ["dotenvx", "env", "gui", "environment-variables"],
+  "keywords": [
+    "dotenvx",
+    "env",
+    "gui",
+    "environment-variables"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -38,5 +48,30 @@
   "dependencies": {
     "@dotenvx/dotenvx": "^2.21.0",
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "tech.toshon.dotenvx-gui",
+    "productName": "dotenvx GUI",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "server.js",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "mac": {
+      "target": "dir",
+      "icon": "electron/icon.icns",
+      "category": "public.app-category.developer-tools"
+    }
   }
 }

@@ -1,0 +1,42 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "dotenvx-gui",
+  "version": "1.2.0",
+  "identifier": "tech.toshon.dotenvx-gui",
+  "build": {
+    "frontendDist": "../public"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "dotenvx GUI",
+        "width": 1100,
+        "height": 750,
+        "minWidth": 850,
+        "minHeight": 550,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: tauri: http://tauri.localhost https://tauri.localhost; script-src 'self' 'unsafe-inline' ipc: tauri:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: asset:; connect-src 'self' ipc: tauri: http://tauri.localhost https://tauri.localhost;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}
