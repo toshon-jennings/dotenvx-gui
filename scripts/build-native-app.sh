@@ -8,6 +8,7 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
 cd "$PROJECT_DIR"
+"$PROJECT_DIR/scripts/build-native-icon.sh"
 swift build -c release
 
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"

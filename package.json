@@ -1,6 +1,6 @@
 {
   "name": "dotenvx-gui",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Local web GUI for dotenvx — browse, edit, encrypt/decrypt .env files visually",
   "author": "Toshon Jennings",
   "main": "server.js",
@@ -25,7 +25,8 @@
     "desktop:dev": "electron electron/main.cjs",
     "desktop:build": "electron-builder --mac dir",
     "native:test": "swift test",
-    "native:build": "./scripts/build-native-app.sh"
+    "native:build": "./scripts/build-native-app.sh",
+    "native:dmg": "./scripts/build-native-dmg.sh"
   },
   "keywords": [
     "dotenvx",

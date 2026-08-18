@@ -5,6 +5,7 @@ dist-swift/
 .build/
 .env.keys
 .DS_Store
+__pycache__/
 .claude/
 output/
 *.tgz
